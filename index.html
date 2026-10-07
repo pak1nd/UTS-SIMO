@@ -25,6 +25,8 @@
 
 *{box-sizing:border-box;margin:0;padding:0}
 html{-webkit-text-size-adjust:100%}
+/* mencegah gestur tarik-ke-bawah di Chrome Android memuat ulang halaman saat ujian berjalan */
+html,body{overscroll-behavior-y:none}
 
 body{
   background:var(--kertas);
@@ -337,27 +339,46 @@ function panggil(params, batasMs){
       .join('&');
 
     skrip.src = API_URL + '?' + q + '&callback=' + nama;
-    skrip.onerror = () => { bersihkan(); reject(galatJaringan('Gagal terhubung ke server.')); };
+    skrip.onerror = () => { bersihkan(); reject(galatJaringan('Gagal terhubung ke server.', true)); };
     document.body.appendChild(skrip);
   });
 }
 
-/* galat jaringan diberi tanda agar saran "periksa koneksi" tidak muncul untuk galat dari server */
-function galatJaringan(pesan){
+/* galat jaringan diberi tanda agar saran "periksa koneksi" tidak muncul untuk galat dari server.
+   cepat = true bila permintaan sudah berakhir dengan kegagalan (Google menolak / koneksi putus);
+   false bila hanya kehabisan waktu tunggu, saat permintaan lama mungkin masih berjalan di server. */
+function galatJaringan(pesan, cepat){
   const e = new Error(pesan);
   e.jaringan = true;
+  e.cepat = !!cepat;
   return e;
+}
+
+/* Kegagalan CEPAT aman diulang dengan jeda (permintaannya sudah berakhir, jadi tidak menambah antrean).
+   Kegagalan LAMBAT (waktu habis) tidak diulang otomatis. Jeda diberi acak agar mahasiswa tidak mengulang serempak. */
+const JEDA_ULANG = [3000, 6000, 10000, 15000, 20000];   // ms
+let infoUlang = '';
+async function panggilTahan(params, batasMs){
+  for (let i = 0; ; i++){
+    try { return await panggil(params, batasMs); }
+    catch (err){
+      if (!err.cepat || i >= JEDA_ULANG.length) throw err;
+      pernahGagalJaringan = true;   // permintaan yang tampak gagal mungkin sudah sampai ke server
+      infoUlang = ' Koneksi terputus, mencoba lagi (' + (i + 1) + ' dari ' + JEDA_ULANG.length + ')…';
+      await new Promise(r => setTimeout(r, JEDA_ULANG[i] + Math.random() * 1000));
+    }
+  }
 }
 
 /* Hitungan detik pada layar memuat: mahasiswa tahu halaman masih bekerja dan tidak memuat ulang
    (setiap muat ulang menambah beban pada server yang memang sedang lambat). Mengembalikan fungsi penghenti. */
 function tungguLayar(teksDasar){
   const mulai = Date.now();
+  infoUlang = '';
   const tampil = () => {
     const d = Math.floor((Date.now() - mulai) / 1000);
-    el('teksMuat').textContent = d < 8
-      ? teksDasar
-      : teksDasar + ' ' + d + ' dtk. Server sedang ramai, mohon tunggu. Jangan menutup atau memuat ulang halaman.';
+    el('teksMuat').textContent = teksDasar + infoUlang +
+      (d < 8 ? '' : ' ' + d + ' dtk. Server sedang ramai, mohon tunggu. Jangan menutup atau memuat ulang halaman.');
   };
   tampil();
   const id = setInterval(tampil, 1000);
@@ -394,8 +415,8 @@ el('tombolMulai').onclick = async () => {
     /* cek NIM dan ambil soal tidak saling bergantung; dipanggil bersamaan agar
        mahasiswa menunggu server satu kali, bukan dua kali berturut-turut */
     const [cek, data] = await Promise.all([
-      panggil({ action:'cek', nim: identitas.nim }, BATAS_BACA),
-      panggil({ action:'soal' }, BATAS_BACA)
+      panggilTahan({ action:'cek', nim: identitas.nim }, BATAS_BACA),
+      panggilTahan({ action:'soal' }, BATAS_BACA)
     ]);
     berhenti();
 
@@ -616,7 +637,7 @@ async function kirim(paksa){
   const durasi = Math.round((Date.now() - mulaiKerja)/1000);
 
   try {
-    const hasil = await panggil({
+    const hasil = await panggilTahan({
       action:'submit',
       nama: identitas.nama,
       nim: identitas.nim,
