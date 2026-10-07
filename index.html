@@ -307,17 +307,26 @@ let sedangKirim = false;
 let aktif       = false;  // true selama layar soal berjalan
 let langgar     = 0;
 let catatanLanggar = [];
+let pernahGagalJaringan = false;   // true bila pengiriman jawaban pernah kehabisan waktu tunggu
+
+/* Apps Script kadang butuh puluhan detik untuk menjawab (terukur 2–60 detik), terutama saat banyak
+   mahasiswa masuk bersamaan. Karena itu batas tunggu sengaja panjang dan TIDAK ada pengulangan
+   otomatis: permintaan yang diulang tidak membatalkan yang lama, sehingga hanya menambah antrean
+   pada server yang sudah lambat. Satu permintaan per panggilan, ditunggu sampai selesai. */
+const BATAS_BACA  = 120000;  // ms untuk cek dan soal
+const BATAS_KIRIM = 150000;  // ms untuk mengirim jawaban (server bisa antre sampai 30 detik)
 
 /* ---------- JSONP: cara paling stabil memanggil Apps Script dari GitHub Pages ---------- */
-function panggil(params){
+function panggil(params, batasMs){
   return new Promise((resolve, reject) => {
     const nama  = 'cb_' + Date.now() + '_' + Math.floor(Math.random()*1e6);
     const skrip = document.createElement('script');
-    const batas = setTimeout(() => { bersihkan(); reject(galatJaringan('Server tidak merespons.')); }, 25000);
+    const batas = setTimeout(() => { bersihkan(); reject(galatJaringan('Server tidak merespons.')); }, batasMs || BATAS_BACA);
 
     function bersihkan(){
       clearTimeout(batas);
-      delete window[nama];
+      // balasan yang datang terlambat tetap memanggil fungsi ini; dibiarkan kosong agar tidak muncul galat
+      window[nama] = () => {};
       if (skrip.parentNode) skrip.parentNode.removeChild(skrip);
     }
 
@@ -338,6 +347,21 @@ function galatJaringan(pesan){
   const e = new Error(pesan);
   e.jaringan = true;
   return e;
+}
+
+/* Hitungan detik pada layar memuat: mahasiswa tahu halaman masih bekerja dan tidak memuat ulang
+   (setiap muat ulang menambah beban pada server yang memang sedang lambat). Mengembalikan fungsi penghenti. */
+function tungguLayar(teksDasar){
+  const mulai = Date.now();
+  const tampil = () => {
+    const d = Math.floor((Date.now() - mulai) / 1000);
+    el('teksMuat').textContent = d < 8
+      ? teksDasar
+      : teksDasar + ' ' + d + ' dtk. Server sedang ramai, mohon tunggu. Jangan menutup atau memuat ulang halaman.';
+  };
+  tampil();
+  const id = setInterval(tampil, 1000);
+  return () => clearInterval(id);
 }
 
 function tampilkan(nama){
@@ -364,22 +388,28 @@ el('tombolMulai').onclick = async () => {
   pesan.textContent = '';
   el('tombolMulai').disabled = true;
   tampilkan('muat');
+  const berhenti = tungguLayar('Menyiapkan soal…');
 
   try {
-    const cek = await panggil({ action:'cek', nim: identitas.nim });
+    /* cek NIM dan ambil soal tidak saling bergantung; dipanggil bersamaan agar
+       mahasiswa menunggu server satu kali, bukan dua kali berturut-turut */
+    const [cek, data] = await Promise.all([
+      panggil({ action:'cek', nim: identitas.nim }, BATAS_BACA),
+      panggil({ action:'soal' }, BATAS_BACA)
+    ]);
+    berhenti();
+
     if (!cek.ok) throw new Error(cek.error || 'NIM tidak valid.');
     if (cek.sudah){
       tampilkan('mulai');
       el('tombolMulai').disabled = false;
       return pesan.textContent = 'NIM ini sudah pernah mengumpulkan. Hubungi dosen bila perlu mengulang.';
     }
-
-    const data = await panggil({ action:'soal' });
     if (!data.ok) throw new Error(data.error || 'Soal gagal dimuat.');
 
     daftarSoal   = data.soal;
     detikPerSoal = data.detikPerSoal || 144;
-    indeks = 0; jawaban = {}; langgar = 0; catatanLanggar = [];
+    indeks = 0; jawaban = {}; langgar = 0; catatanLanggar = []; pernahGagalJaringan = false;
     mulaiKerja = Date.now();
     aktif = true;
 
@@ -389,9 +419,11 @@ el('tombolMulai').onclick = async () => {
     window.addEventListener('beforeunload', jagaKeluar);
     gambarSoal();
   } catch (err){
+    berhenti();
     tampilkan('mulai');
     el('tombolMulai').disabled = false;
-    pesan.textContent = err.message + (err.jaringan ? ' Periksa koneksi, lalu coba lagi.' : '');
+    pesan.textContent = err.message +
+      (err.jaringan ? ' Server sedang ramai atau koneksi terputus. Tunggu sebentar, lalu tekan Mulai kerjakan lagi.' : '');
   }
 };
 
@@ -575,10 +607,10 @@ async function kirim(paksa){
   window.removeEventListener('beforeunload', jagaKeluar);
   if (document.fullscreenElement && document.exitFullscreen) { try { document.exitFullscreen(); } catch(e){} }
 
-  el('teksMuat').textContent = paksa
-    ? 'Batas perpindahan tercapai. Mengirim jawaban…'
-    : 'Mengirim jawaban…';
   tampilkan('muat');
+  const berhenti = tungguLayar(paksa
+    ? 'Batas perpindahan tercapai. Mengirim jawaban…'
+    : 'Mengirim jawaban…');
 
   const jw     = daftarSoal.map(s => s.id + '-' + (jawaban[s.id] || '')).join('~');
   const durasi = Math.round((Date.now() - mulaiKerja)/1000);
@@ -594,7 +626,8 @@ async function kirim(paksa){
       pelanggaran: langgar,
       paksa: paksa ? 1 : 0,
       catatan: catatanLanggar.join(' | ').slice(0,900)
-    });
+    }, BATAS_KIRIM);
+    berhenti();
 
     if (!hasil.ok) throw new Error(hasil.error);
 
@@ -620,9 +653,21 @@ async function kirim(paksa){
 
     tampilkan('hasil');
   } catch (err){
+    berhenti();
     sedangKirim = false;
+    if (err.jaringan) pernahGagalJaringan = true;
+
+    /* percobaan sebelumnya yang tampak gagal (server lambat) ternyata sudah diterima server */
+    if (pernahGagalJaringan && /sudah pernah mengumpulkan/i.test(err.message)){
+      el('teksMuat').textContent =
+        'Jawabanmu sudah tersimpan di server pada percobaan sebelumnya. ' +
+        'Nilai dapat dilihat dosen pada rekap. Kamu boleh menutup halaman ini.';
+      return;
+    }
+
     el('teksMuat').innerHTML =
       'Jawaban belum terkirim: ' + lolos(err.message) +
+      (err.jaringan ? '<br>Jawabanmu masih aman di halaman ini, jangan ditutup.' : '') +
       '<br><br><button class="utama" onclick="kirim(' + (paksa?'true':'false') + ')">Coba kirim lagi</button>';
   }
 }
