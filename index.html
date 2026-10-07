@@ -96,6 +96,24 @@ input[type=text]:focus{outline:2px solid var(--hijau);outline-offset:1px;border-
 }
 .pesan:empty{display:none}
 
+/* ---------- lanjutkan ujian setelah halaman termuat ulang ---------- */
+.lanjut{
+  border:1px solid var(--hijau);background:var(--hijau-tipis);
+  border-radius:var(--radius);padding:16px;margin-bottom:28px;
+}
+.lanjut b{
+  display:block;font-family:'JetBrains Mono',monospace;font-size:.78rem;
+  letter-spacing:.04em;color:var(--hijau);margin-bottom:6px;
+}
+.lanjut p{font-size:.95rem;margin-bottom:4px}
+.lanjut .utama{margin-top:12px}
+.sekunder{
+  width:100%;margin-top:8px;padding:12px;cursor:pointer;
+  font-family:'JetBrains Mono',monospace;font-size:.82rem;
+  background:none;color:var(--tinta-lembut);
+  border:1px solid var(--garis);border-radius:var(--radius);
+}
+
 /* ---------- layar soal ---------- */
 .jejak{display:flex;gap:2px;margin-bottom:20px}
 .jejak i{flex:1;height:3px;background:var(--garis);border-radius:2px}
@@ -187,6 +205,15 @@ input[type=text]:focus{outline:2px solid var(--hijau);outline-offset:1px;border-
   <!-- ================= LAYAR 1: PEMBUKA ================= -->
   <section id="layarMulai">
     <p class="matkul">Sistem Informasi Manajemen Olahraga · PKO FIK UNIMED</p>
+
+    <!-- muncul bila halaman termuat ulang saat ujian berjalan -->
+    <div class="lanjut tersembunyi" id="kotakLanjut">
+      <b>UJIAN BELUM SELESAI</b>
+      <p id="infoLanjut"></p>
+      <p>Waktu tetap berjalan selama halaman tertutup.</p>
+      <button class="utama" id="tombolLanjutSesi">Lanjutkan ujian</button>
+      <button class="sekunder" id="tombolBuangSesi">Bukan saya, mulai dari awal</button>
+    </div>
 
     <h1>Ujian Tengah Semester<br>Pertemuan 1–6</h1>
     <p class="pengantar">
@@ -394,6 +421,108 @@ function lolos(t){
   return String(t).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
 }
 
+/* ================= LANJUTKAN SETELAH HALAMAN TERMUAT ULANG =================
+   Keadaan ujian disimpan di browser (localStorage): soal yang sudah diterima, jawaban, posisi, tenggat soal
+   berjalan, dan catatan pelanggaran. Bila halaman termuat ulang (tarik layar, tab dibuang Android, dst.),
+   mahasiswa bisa melanjutkan TANPA menghubungi server lagi sampai jawaban dikirim.
+   Waktu tetap berjalan selama halaman tertutup, seperti saat ia berpindah aplikasi. */
+const KUNCI_SESI     = 'uts_simo_sesi_v1';
+const MAKS_UMUR_SESI = 4 * 60 * 60 * 1000;   // sesi yang lebih tua dari 4 jam dibuang
+const AMBANG_SESI    = 6;                    // detik; muat ulang yang lebih singkat tidak dihitung pelanggaran
+let terakhirSimpan   = 0;
+
+function simpanSesi(ekstra){
+  terakhirSimpan = Date.now();
+  try {
+    localStorage.setItem(KUNCI_SESI, JSON.stringify(Object.assign({
+      identitas, daftarSoal, jawaban, indeks, batasWaktu, detikPerSoal, langgar, catatanLanggar, mulaiKerja,
+      disimpan: terakhirSimpan
+    }, ekstra || {})));
+  } catch(e){}   // mode pribadi atau penyimpanan penuh: ujian tetap jalan, hanya tanpa fitur lanjutkan
+}
+
+function hapusSesi(){
+  try { localStorage.removeItem(KUNCI_SESI); } catch(e){}
+}
+
+function bacaSesi(){
+  try {
+    const s = JSON.parse(localStorage.getItem(KUNCI_SESI) || 'null');
+    if (!s || !s.identitas || !Array.isArray(s.daftarSoal) || !s.daftarSoal.length || !(s.indeks >= 0)) return null;
+    if (Date.now() - s.disimpan > MAKS_UMUR_SESI){ hapusSesi(); return null; }
+    return s;
+  } catch(e){ return null; }
+}
+
+el('tombolBuangSesi').onclick = () => {
+  hapusSesi();
+  el('kotakLanjut').classList.add('tersembunyi');
+};
+
+el('tombolLanjutSesi').onclick = () => {
+  const s = bacaSesi();
+  el('kotakLanjut').classList.add('tersembunyi');
+  if (!s) return;
+
+  identitas      = s.identitas;
+  daftarSoal     = s.daftarSoal;
+  jawaban        = s.jawaban || {};
+  detikPerSoal   = s.detikPerSoal || 144;
+  langgar        = s.langgar || 0;
+  catatanLanggar = s.catatanLanggar || [];
+  mulaiKerja     = s.mulaiKerja || Date.now();
+  sedangKirim    = false;
+  pernahGagalJaringan = true;   // pengiriman sebelum muat ulang mungkin sudah sampai ke server
+
+  /* pengiriman sempat dimulai sebelum halaman tertutup: kirim ulang; server menolak NIM ganda,
+     dan halaman menampilkan "sudah tersimpan" bila yang pertama ternyata masuk */
+  if (s.mengirim){ aktif = false; kirim(!!s.paksa); return; }
+
+  /* waktu tetap berjalan selama halaman tertutup: soal yang tenggatnya terlewati dianggap lewat */
+  const sekarang = Date.now();
+  const tenggat  = s.batasWaktu || 0;
+  const jauhDetik = (sekarang - (s.disimpan || sekarang)) / 1000;
+  let q = s.indeks, sisaMs = null;
+  if (sekarang <= tenggat) sisaMs = tenggat - sekarang;
+  else q = s.indeks + 1 + Math.floor((sekarang - tenggat) / (detikPerSoal * 1000));
+
+  const catatJauh = () => rekamPelanggaran('halaman dimuat ulang, sekitar ' + Math.round(jauhDetik) + ' detik di luar halaman');
+
+  if (q >= daftarSoal.length){            // seluruh sisa waktu sudah habis selagi halaman tertutup
+    indeks = daftarSoal.length - 1;
+    aktif = true;
+    if (jauhDetik >= AMBANG_SESI) catatJauh();
+    if (aktif){ aktif = false; kirim(false); }
+    return;
+  }
+
+  indeks = q;
+  aktif = true;
+  layarPenuh();
+  bangunJejak();
+  tampilkan('soal');
+  window.addEventListener('beforeunload', jagaKeluar);
+  gambarSoal(sisaMs);
+  if (langgar > 0){
+    el('labelKanan').textContent = 'Pelanggaran ' + langgar + ' dari ' + BATAS_LANGGAR;
+    el('labelKanan').className = 'catat';
+  }
+  if (jauhDetik >= AMBANG_SESI){
+    catatJauh();
+    if (aktif && langgar > 0 && langgar < BATAS_LANGGAR) tampilkanTirai();
+  }
+  simpanSesi();
+};
+
+/* tawarkan melanjutkan bila ada ujian yang belum selesai di browser ini */
+(function tawarkanLanjut(){
+  const s = bacaSesi();
+  if (!s) return;
+  el('infoLanjut').textContent = s.identitas.nama + ' · ' + s.identitas.nim + ' · ' +
+    (s.mengirim ? 'jawaban belum terkonfirmasi terkirim' : 'soal ' + (s.indeks + 1) + ' dari ' + s.daftarSoal.length);
+  el('kotakLanjut').classList.remove('tersembunyi');
+})();
+
 /* ================= LAYAR PEMBUKA ================= */
 el('tombolMulai').onclick = async () => {
   const pesan = el('pesanMulai');
@@ -422,6 +551,7 @@ el('tombolMulai').onclick = async () => {
 
     if (!cek.ok) throw new Error(cek.error || 'NIM tidak valid.');
     if (cek.sudah){
+      hapusSesi();
       tampilkan('mulai');
       el('tombolMulai').disabled = false;
       return pesan.textContent = 'NIM ini sudah pernah mengumpulkan. Hubungi dosen bila perlu mengulang.';
@@ -494,6 +624,7 @@ function rekamPelanggaran(jenis){
 
   el('labelKanan').textContent = 'Pelanggaran ' + langgar + ' dari ' + BATAS_LANGGAR;
   el('labelKanan').className = 'catat';
+  simpanSesi();
 
   if (langgar >= BATAS_LANGGAR){
     aktif = false;
@@ -535,7 +666,7 @@ function perbaruiJejak(){
   });
 }
 
-function gambarSoal(){
+function gambarSoal(sisaMs){
   const s = daftarSoal[indeks];
   const terpilih = jawaban[s.id] || '';
 
@@ -560,34 +691,40 @@ function gambarSoal(){
     b.onclick = () => {
       jawaban[s.id] = o.kode;
       [...kotak.children].forEach(x => x.setAttribute('aria-pressed', String(x === b)));
+      simpanSesi();
     };
     kotak.appendChild(b);
   });
 
   perbaruiJejak();
-  mulaiHitungMundur();
+  mulaiHitungMundur(sisaMs);
+  simpanSesi();
 }
 
-/* hitung mundur berbasis stempel waktu, tetap akurat walau tab dijalankan di latar */
-function mulaiHitungMundur(){
+/* hitung mundur berbasis stempel waktu, tetap akurat walau tab dijalankan di latar.
+   sisaMs hanya diisi saat ujian dilanjutkan setelah muat ulang: soal itu memakai sisa waktunya saja. */
+function mulaiHitungMundur(sisaMs){
   clearInterval(jam);
-  batasWaktu = Date.now() + detikPerSoal * 1000;
+  const totalMs  = detikPerSoal * 1000;
+  const durasiMs = (sisaMs != null) ? Math.max(sisaMs, 1000) : totalMs;
+  batasWaktu = Date.now() + durasiMs;
 
   const isi = el('isiWaktu');
   isi.style.transition = 'none';
-  isi.style.transform  = 'scaleX(1)';
-  el('hitung').classList.remove('mendesak');
-  el('detik').textContent = detikPerSoal;
+  isi.style.transform  = 'scaleX(' + (durasiMs / totalMs) + ')';
+  el('hitung').classList.toggle('mendesak', durasiMs <= 10000);
+  el('detik').textContent = Math.ceil(durasiMs / 1000);
 
   void isi.offsetWidth;                       // paksa reflow agar transisi mulus
-  isi.style.transition = 'transform ' + detikPerSoal + 's linear';
+  isi.style.transition = 'transform ' + (durasiMs / 1000) + 's linear';
   isi.style.transform  = 'scaleX(0)';
 
   jam = setInterval(() => {
     const sisa = Math.ceil((batasWaktu - Date.now()) / 1000);
     el('detik').textContent = Math.max(sisa, 0);
     if (sisa <= 10) el('hitung').classList.add('mendesak');
-    if (sisa <= 0){ clearInterval(jam); lanjut(); }
+    if (sisa <= 0){ clearInterval(jam); lanjut(); return; }
+    if (Date.now() - terakhirSimpan >= 2000) simpanSesi();   // detak: penanda terakhir halaman ini masih hidup
   }, 250);
 }
 
@@ -628,6 +765,7 @@ async function kirim(paksa){
   window.removeEventListener('beforeunload', jagaKeluar);
   if (document.fullscreenElement && document.exitFullscreen) { try { document.exitFullscreen(); } catch(e){} }
 
+  simpanSesi({ mengirim: true, paksa: !!paksa });   // bila halaman tertutup saat mengirim, bisa dikirim ulang dengan aman
   tampilkan('muat');
   const berhenti = tungguLayar(paksa
     ? 'Batas perpindahan tercapai. Mengirim jawaban…'
@@ -651,6 +789,7 @@ async function kirim(paksa){
     berhenti();
 
     if (!hasil.ok) throw new Error(hasil.error);
+    hapusSesi();   // jawaban sudah diterima server; tidak ada lagi yang perlu dilanjutkan
 
     el('angkaSkor').innerHTML = hasil.skor + '<small>/100</small>';
     el('sapaHasil').textContent = hasil.nama + ' · ' + hasil.nim + ' · Kelas ' + hasil.kelas;
@@ -680,6 +819,7 @@ async function kirim(paksa){
 
     /* percobaan sebelumnya yang tampak gagal (server lambat) ternyata sudah diterima server */
     if (pernahGagalJaringan && /sudah pernah mengumpulkan/i.test(err.message)){
+      hapusSesi();
       el('teksMuat').textContent =
         'Jawabanmu sudah tersimpan di server pada percobaan sebelumnya. ' +
         'Nilai dapat dilihat dosen pada rekap. Kamu boleh menutup halaman ini.';
