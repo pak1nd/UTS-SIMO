@@ -110,7 +110,7 @@ mengikuti posisi, sedangkan penilaian memakai identitas pilihan sehingga tetap b
 
 Mata kuliah ini kelas pilihan yang digabung, sehingga seluruh mahasiswa mengerjakan satu
 ujian yang sama dan tidak ada pemisahan soal per kelas. Pada layar awal, mahasiswa
-mengetik sendiri kelas asalnya (misalnya `2023 B`). Isian itu dirapikan (spasi, huruf
+mengetik sendiri kelas asalnya (misalnya `IKOR 2024 B`). Isian itu dirapikan (spasi, huruf
 besar, paling banyak 30 karakter) lalu dicatat pada kolom **Kelas** di tab `Hasil` dan
 `Detail`, sehingga rekap dapat disaring atau dikelompokkan per kelas asal.
 
