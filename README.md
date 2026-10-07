@@ -20,7 +20,7 @@ Cakupan materi: **Pertemuan 1–6**.
 |---|---|
 | Jumlah soal | 50 pilihan ganda (A–E) |
 | Batas waktu | 144 detik per soal (total paling lama 120 menit); soal yang lewat waktu tidak dapat dikerjakan lagi |
-| Identitas | Nama, NIM, Kelas (A–E) |
+| Identitas | Nama, NIM, dan Kelas asal (diketik sendiri; kelas gabung) |
 | Pengumpulan | Satu NIM hanya bisa mengumpulkan satu kali |
 | Penilaian | Otomatis di server, skor 0–100 |
 | Pengawasan | Perpindahan tab atau aplikasi dicatat; pada kali ketiga jawaban dikirim otomatis |
@@ -97,36 +97,27 @@ Pengaturan lain ada pada objek `CFG`:
 | `ACAK_SOAL` | Mengacak urutan soal per mahasiswa |
 | `ACAK_PILIHAN` | Mengacak urutan pilihan A–E per mahasiswa |
 | `BOLEH_ULANG` | Mengizinkan satu NIM mengumpulkan lebih dari sekali |
-| `KELAS` | Daftar kelas yang diterima server |
 
-Bila `DETIK_PER_SOAL`, `JUMLAH_SOAL`, atau `KELAS` diubah, samakan juga tampilan aturan
-dan tombol kelas pada `index.html` (blok `.aturan` dan konstanta `KELAS`).
+Bila `DETIK_PER_SOAL` atau `JUMLAH_SOAL` diubah, samakan juga angka pada tampilan aturan
+di `index.html` (blok `.aturan`).
 
 Urutan pilihan A–E diacak ulang setiap kali `setupDatabase` dijalankan dengan susunan
 yang merata: pada 50 soal, tiap huruf menjadi kunci tepat 10 kali. Selain itu, saat
 ujian, urutan pilihan diacak lagi untuk setiap mahasiswa; huruf yang tampil di layar
 mengikuti posisi, sedangkan penilaian memakai identitas pilihan sehingga tetap benar.
 
-## Soal berbeda untuk tiap kelas
+## Kelas gabung
 
-Tab `Soal` memiliki kolom **Paket** yang menentukan kelas penerima tiap soal:
-
-| Isi kolom Paket | Diterima oleh |
-|---|---|
-| `semua` | Seluruh kelas (nilai bawaan) |
-| `A` | Kelas A saja |
-| `A,B` | Kelas A dan B |
-
-Kolom ini bisa disunting langsung di Spreadsheet tanpa menyentuh kode; isinya
-dipertahankan saat `setupDatabase` dijalankan lagi. Frontend mengirimkan kelas mahasiswa
-saat meminta soal, lalu server hanya mengirim soal yang cocok.
-
-Bila jumlah soal yang cocok kurang dari `CFG.JUMLAH_SOAL`, server menolak dengan pesan
-yang menyebutkan kekurangannya.
+Mata kuliah ini kelas pilihan yang digabung, sehingga seluruh mahasiswa mengerjakan satu
+ujian yang sama dan tidak ada pemisahan soal per kelas. Pada layar awal, mahasiswa
+mengetik sendiri kelas asalnya (misalnya `2023 B`). Isian itu dirapikan (spasi, huruf
+besar, paling banyak 30 karakter) lalu dicatat pada kolom **Kelas** di tab `Hasil` dan
+`Detail`, sehingga rekap dapat disaring atau dikelompokkan per kelas asal.
 
 Bank saat ini berisi 50 soal dan `JUMLAH_SOAL` bernilai 50, sehingga setiap mahasiswa
 mengerjakan seluruh soal dengan urutan berbeda. Untuk mengundi sebagian saja, perbesar
-bank soal lalu turunkan `JUMLAH_SOAL`.
+bank soal lalu turunkan `JUMLAH_SOAL`. Bila isi bank kurang dari `JUMLAH_SOAL`, server
+menolak dengan pesan yang menyebutkan kekurangannya.
 
 ## Pengawasan dan izin mengulang
 

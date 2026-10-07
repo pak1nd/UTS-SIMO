@@ -80,16 +80,6 @@ input[type=text]{
 input[type=text]:focus{outline:2px solid var(--hijau);outline-offset:1px;border-color:transparent}
 .ladang{margin-bottom:20px}
 
-.kelas-pilih{display:flex;gap:8px;flex-wrap:wrap}
-.kelas-pilih button{
-  font-family:'JetBrains Mono',monospace;font-size:.95rem;font-weight:500;
-  min-width:52px;padding:12px 0;cursor:pointer;flex:1;
-  background:#fff;color:var(--tinta);
-  border:1px solid var(--garis);border-radius:var(--radius);
-}
-.kelas-pilih button[aria-pressed=true]{background:var(--hijau);border-color:var(--hijau);color:#fff}
-.kelas-pilih button:focus-visible{outline:2px solid var(--hijau);outline-offset:2px}
-
 .utama{
   width:100%;margin-top:12px;padding:16px;cursor:pointer;
   font-family:'JetBrains Mono',monospace;font-size:.95rem;font-weight:500;letter-spacing:.02em;
@@ -228,8 +218,8 @@ input[type=text]:focus{outline:2px solid var(--hijau);outline-offset:1px;border-
     </div>
 
     <div class="ladang">
-      <label>Kelas</label>
-      <div class="kelas-pilih" id="kelasPilih"></div>
+      <label for="kelas">Kelas</label>
+      <input type="text" id="kelas" maxlength="30" autocomplete="off" placeholder="Kelas asalmu, contoh: 2023 B">
     </div>
 
     <button class="utama" id="tombolMulai">Mulai kerjakan</button>
@@ -299,7 +289,6 @@ input[type=text]:focus{outline:2px solid var(--hijau);outline-offset:1px;border-
    ============================================================ */
 const API_URL = 'GANTI_DENGAN_URL_EXEC_APPS_SCRIPT';
 
-const KELAS = ['A','B','C','D','E'];
 const HURUF = ['A','B','C','D','E'];   // label pilihan menurut posisi tampil
 const BATAS_LANGGAR = 3;   // pelanggaran ke-3 = kirim paksa
 
@@ -361,27 +350,15 @@ function lolos(t){
 }
 
 /* ================= LAYAR PEMBUKA ================= */
-const kotakKelas = el('kelasPilih');
-KELAS.forEach(k => {
-  const b = document.createElement('button');
-  b.type = 'button';
-  b.textContent = k;
-  b.setAttribute('aria-pressed','false');
-  b.onclick = () => {
-    identitas.kelas = k;
-    [...kotakKelas.children].forEach(x => x.setAttribute('aria-pressed', String(x === b)));
-  };
-  kotakKelas.appendChild(b);
-});
-
 el('tombolMulai').onclick = async () => {
   const pesan = el('pesanMulai');
-  identitas.nama = el('nama').value.trim();
-  identitas.nim  = el('nim').value.trim();
+  identitas.nama  = el('nama').value.trim();
+  identitas.nim   = el('nim').value.trim();
+  identitas.kelas = el('kelas').value.replace(/\s+/g, ' ').trim();
 
   if (identitas.nama.length < 3) return pesan.textContent = 'Nama lengkap belum diisi dengan benar.';
   if (identitas.nim.length < 5)  return pesan.textContent = 'NIM belum diisi dengan benar.';
-  if (!identitas.kelas)          return pesan.textContent = 'Pilih kelas terlebih dahulu.';
+  if (!identitas.kelas)          return pesan.textContent = 'Kelas belum diisi.';
   if (API_URL.indexOf('http') !== 0) return pesan.textContent = 'API_URL belum diisi pada index.html.';
 
   pesan.textContent = '';
@@ -397,7 +374,7 @@ el('tombolMulai').onclick = async () => {
       return pesan.textContent = 'NIM ini sudah pernah mengumpulkan. Hubungi dosen bila perlu mengulang.';
     }
 
-    const data = await panggil({ action:'soal', kelas: identitas.kelas });
+    const data = await panggil({ action:'soal' });
     if (!data.ok) throw new Error(data.error || 'Soal gagal dimuat.');
 
     daftarSoal   = data.soal;
