@@ -344,6 +344,7 @@ let pernahGagalJaringan = false;   // true bila pengiriman jawaban pernah kehabi
    pada server yang sudah lambat. Satu permintaan per panggilan, ditunggu sampai selesai. */
 const BATAS_BACA  = 120000;  // ms untuk cek dan soal
 const BATAS_KIRIM = 150000;  // ms untuk mengirim jawaban (server bisa antre sampai 30 detik)
+const JITTER_MULAI = 4000;   // ms; jeda acak sebelum permintaan pertama agar puluhan mahasiswa tidak menekan server serempak
 
 /* ---------- JSONP: cara paling stabil memanggil Apps Script dari GitHub Pages ---------- */
 function panggil(params, batasMs){
@@ -385,15 +386,27 @@ function galatJaringan(pesan, cepat){
    Kegagalan LAMBAT (waktu habis) tidak diulang otomatis. Jeda diberi acak agar mahasiswa tidak mengulang serempak. */
 const JEDA_ULANG = [3000, 6000, 10000, 15000, 20000];   // ms
 let infoUlang = '';
+const jedaUlang = i => new Promise(r => setTimeout(r, JEDA_ULANG[i] + Math.random() * 1000));
+
 async function panggilTahan(params, batasMs){
   for (let i = 0; ; i++){
-    try { return await panggil(params, batasMs); }
+    let hasil;
+    try { hasil = await panggil(params, batasMs); }
     catch (err){
       if (!err.cepat || i >= JEDA_ULANG.length) throw err;
       pernahGagalJaringan = true;   // permintaan yang tampak gagal mungkin sudah sampai ke server
       infoUlang = ' Koneksi terputus, mencoba lagi (' + (i + 1) + ' dari ' + JEDA_ULANG.length + ')…';
-      await new Promise(r => setTimeout(r, JEDA_ULANG[i] + Math.random() * 1000));
+      await jedaUlang(i);
+      continue;
     }
+
+    /* server menjawab "sedang sibuk" (antrean kunci penuh) SEBELUM memproses permintaan: aman diulang */
+    if (hasil && hasil.ok === false && /sedang sibuk/i.test(hasil.error || '') && i < JEDA_ULANG.length){
+      infoUlang = ' Server sibuk, mencoba lagi (' + (i + 1) + ' dari ' + JEDA_ULANG.length + ')…';
+      await jedaUlang(i);
+      continue;
+    }
+    return hasil;
   }
 }
 
@@ -541,6 +554,8 @@ el('tombolMulai').onclick = async () => {
   const berhenti = tungguLayar('Menyiapkan soal…');
 
   try {
+    await new Promise(r => setTimeout(r, Math.random() * JITTER_MULAI));
+
     /* cek NIM dan ambil soal tidak saling bergantung; dipanggil bersamaan agar
        mahasiswa menunggu server satu kali, bukan dua kali berturut-turut */
     const [cek, data] = await Promise.all([
