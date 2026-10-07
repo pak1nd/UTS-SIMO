@@ -1,0 +1,654 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>UTS Sistem Informasi Manajemen Olahraga</title>
+<meta name="theme-color" content="#F6F8F4">
+<meta name="description" content="Ujian Tengah Semester mata kuliah Sistem Informasi Manajemen Olahraga (SIMO), Pertemuan 1–6.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+
+<style>
+:root{
+  --kertas:#F6F8F4;
+  --tinta:#12271C;
+  --tinta-lembut:#4C6355;
+  --hijau:#1B7F4C;
+  --hijau-tipis:#E4EFE7;
+  --garis:#D3DED6;
+  --sinyal:#B44317;
+  --sinyal-tipis:#FBEBE3;
+  --radius:10px;
+}
+
+*{box-sizing:border-box;margin:0;padding:0}
+html{-webkit-text-size-adjust:100%}
+
+body{
+  background:var(--kertas);
+  color:var(--tinta);
+  font-family:'Fraunces',Georgia,serif;
+  font-optical-sizing:auto;
+  line-height:1.55;
+  min-height:100dvh;
+  padding:0 20px env(safe-area-inset-bottom);
+}
+
+.bingkai{max-width:660px;margin:0 auto;padding:40px 0 64px}
+
+.mono{font-family:'JetBrains Mono',ui-monospace,monospace;font-variant-numeric:tabular-nums}
+
+.matkul{
+  font-family:'JetBrains Mono',monospace;
+  font-size:.72rem;letter-spacing:.06em;
+  color:var(--tinta-lembut);margin-bottom:28px;
+}
+
+h1{
+  font-size:clamp(1.9rem,6vw,2.6rem);
+  font-weight:600;line-height:1.15;letter-spacing:-.015em;
+  margin-bottom:14px;
+}
+
+.pengantar{color:var(--tinta-lembut);font-size:1rem;max-width:52ch;margin-bottom:34px}
+
+/* ---------- aturan ---------- */
+.aturan{border-top:1px solid var(--garis);margin-bottom:36px}
+.aturan div{
+  display:flex;gap:16px;align-items:baseline;
+  padding:13px 0;border-bottom:1px solid var(--garis);
+}
+.aturan b{
+  font-family:'JetBrains Mono',monospace;font-weight:700;
+  font-size:1.05rem;min-width:74px;color:var(--hijau);
+  font-variant-numeric:tabular-nums;
+}
+.aturan div.tegas b{color:var(--sinyal)}
+.aturan span{font-size:.94rem;color:var(--tinta-lembut)}
+
+/* ---------- form ---------- */
+label{
+  display:block;font-family:'JetBrains Mono',monospace;
+  font-size:.74rem;letter-spacing:.04em;color:var(--tinta-lembut);margin-bottom:7px;
+}
+input[type=text]{
+  width:100%;font-family:'Fraunces',serif;font-size:1.05rem;color:var(--tinta);
+  background:#fff;border:1px solid var(--garis);border-radius:var(--radius);padding:13px 15px;
+}
+input[type=text]:focus{outline:2px solid var(--hijau);outline-offset:1px;border-color:transparent}
+.ladang{margin-bottom:20px}
+
+.kelas-pilih{display:flex;gap:8px;flex-wrap:wrap}
+.kelas-pilih button{
+  font-family:'JetBrains Mono',monospace;font-size:.95rem;font-weight:500;
+  min-width:52px;padding:12px 0;cursor:pointer;flex:1;
+  background:#fff;color:var(--tinta);
+  border:1px solid var(--garis);border-radius:var(--radius);
+}
+.kelas-pilih button[aria-pressed=true]{background:var(--hijau);border-color:var(--hijau);color:#fff}
+.kelas-pilih button:focus-visible{outline:2px solid var(--hijau);outline-offset:2px}
+
+.utama{
+  width:100%;margin-top:12px;padding:16px;cursor:pointer;
+  font-family:'JetBrains Mono',monospace;font-size:.95rem;font-weight:500;letter-spacing:.02em;
+  background:var(--hijau);color:#fff;border:none;border-radius:var(--radius);
+}
+.utama:disabled{background:var(--garis);color:#8A9A90;cursor:not-allowed}
+.utama:focus-visible{outline:2px solid var(--tinta);outline-offset:2px}
+
+.pesan{
+  margin-top:16px;padding:12px 14px;border-radius:var(--radius);
+  background:var(--sinyal-tipis);color:var(--sinyal);font-size:.9rem;
+}
+.pesan:empty{display:none}
+
+/* ---------- layar soal ---------- */
+.jejak{display:flex;gap:2px;margin-bottom:20px}
+.jejak i{flex:1;height:3px;background:var(--garis);border-radius:2px}
+.jejak i.lewat{background:var(--hijau)}
+.jejak i.kini{background:var(--tinta)}
+
+.kepala{
+  display:flex;justify-content:space-between;align-items:baseline;
+  font-family:'JetBrains Mono',monospace;font-size:.74rem;
+  color:var(--tinta-lembut);margin-bottom:10px;
+}
+.kepala .catat{color:var(--sinyal)}
+
+.hitung{display:flex;align-items:center;gap:14px;margin-bottom:30px}
+.jalur{flex:1;height:6px;background:var(--hijau-tipis);border-radius:3px;overflow:hidden}
+.isi{height:100%;width:100%;background:var(--hijau);transform-origin:left center}
+.detik{
+  font-family:'JetBrains Mono',monospace;font-weight:700;font-size:1.5rem;
+  min-width:3.2ch;text-align:right;font-variant-numeric:tabular-nums;
+}
+.mendesak .isi{background:var(--sinyal)}
+.mendesak .detik{color:var(--sinyal)}
+
+.soal{
+  font-size:clamp(1.15rem,4.4vw,1.4rem);font-weight:600;line-height:1.4;margin-bottom:26px;
+  -webkit-user-select:none;user-select:none;
+}
+
+.opsi{display:flex;flex-direction:column;gap:9px;margin-bottom:26px;-webkit-user-select:none;user-select:none}
+.opsi button{
+  display:flex;gap:14px;align-items:flex-start;text-align:left;cursor:pointer;width:100%;
+  padding:14px 16px;background:#fff;border:1px solid var(--garis);border-radius:var(--radius);
+  font-family:'Fraunces',serif;font-size:1rem;line-height:1.45;color:var(--tinta);
+}
+.opsi button:focus-visible{outline:2px solid var(--hijau);outline-offset:2px}
+.opsi button[aria-pressed=true]{border-color:var(--hijau);background:var(--hijau-tipis)}
+.opsi .kode{
+  font-family:'JetBrains Mono',monospace;font-size:.82rem;font-weight:700;
+  color:var(--hijau);padding-top:.18em;
+}
+
+/* ---------- tirai peringatan ---------- */
+.tirai{
+  position:fixed;inset:0;z-index:50;
+  background:var(--sinyal);color:#fff;
+  display:flex;align-items:center;justify-content:center;
+  padding:28px;
+}
+.tirai .kotak{max-width:420px}
+.tirai p.tanda{
+  font-family:'JetBrains Mono',monospace;font-size:.74rem;letter-spacing:.06em;
+  opacity:.85;margin-bottom:18px;
+}
+.tirai h2{font-size:1.7rem;font-weight:600;line-height:1.2;margin-bottom:14px}
+.tirai p.isi-teks{font-size:1rem;opacity:.92;margin-bottom:26px}
+.tirai button{
+  width:100%;padding:15px;cursor:pointer;
+  font-family:'JetBrains Mono',monospace;font-size:.9rem;font-weight:500;
+  background:#fff;color:var(--sinyal);border:none;border-radius:var(--radius);
+}
+.tirai button:focus-visible{outline:2px solid #fff;outline-offset:3px}
+
+/* ---------- hasil ---------- */
+.skor{
+  font-family:'JetBrains Mono',monospace;font-weight:700;
+  font-size:clamp(3.6rem,17vw,5.4rem);line-height:1;letter-spacing:-.03em;margin-bottom:6px;
+}
+.skor small{font-size:.28em;font-weight:400;color:var(--tinta-lembut);margin-left:8px}
+
+.rincian{border-top:1px solid var(--garis);margin:28px 0}
+.rincian div{
+  display:flex;justify-content:space-between;padding:11px 0;
+  border-bottom:1px solid var(--garis);font-size:.95rem;color:var(--tinta-lembut);
+}
+.rincian b{font-family:'JetBrains Mono',monospace;font-weight:500;color:var(--tinta)}
+.rincian b.merah{color:var(--sinyal)}
+
+.tersembunyi{display:none}
+
+.memuat{font-family:'JetBrains Mono',monospace;font-size:.85rem;color:var(--tinta-lembut);padding:60px 0}
+
+@media (prefers-reduced-motion:reduce){ .isi{transition:none !important} }
+</style>
+</head>
+
+<body>
+<div class="bingkai">
+
+  <!-- ================= LAYAR 1: PEMBUKA ================= -->
+  <section id="layarMulai">
+    <p class="matkul">Sistem Informasi Manajemen Olahraga · PKO FIK UNIMED</p>
+
+    <h1>Ujian Tengah Semester<br>Pertemuan 1–6</h1>
+    <p class="pengantar">
+      Materi mencakup konsep dasar SIMO, komponen SIMO, basis data olahraga sederhana,
+      analisis kebutuhan informasi, pemodelan sistem (DFD, UML, ERD), sampai cloud computing.
+    </p>
+
+    <!-- angka pada blok ini hanya tampilan; samakan dengan CFG di Code.gs -->
+    <div class="aturan">
+      <div><b>50</b><span>soal pilihan ganda, urutan soal dan pilihan diacak untuk setiap mahasiswa</span></div>
+      <div><b>144 dtk</b><span>batas waktu tiap soal (2 menit 24 detik), habis waktu berarti soal terlewat</span></div>
+      <div><b>1×</b><span>satu NIM hanya bisa mengumpulkan sekali</span></div>
+      <div class="tegas"><b>3×</b><span>meninggalkan halaman lebih dari 3 detik, jawaban langsung dikirim</span></div>
+    </div>
+
+    <p class="pengantar">
+      Selama mengerjakan, jangan berpindah ke aplikasi atau tab lain. Kepergian
+      yang lebih dari tiga detik tercatat beserta lamanya dan terlihat oleh dosen.
+      Notifikasi yang lewat sekilas tidak dihitung. Waktu tetap berjalan selama
+      kamu berada di luar halaman, jadi aktifkan mode jangan ganggu sebelum mulai.
+    </p>
+
+    <div class="ladang">
+      <label for="nama">Nama lengkap</label>
+      <input type="text" id="nama" autocomplete="name" placeholder="Tulis nama sesuai daftar hadir">
+    </div>
+
+    <div class="ladang">
+      <label for="nim">NIM</label>
+      <input type="text" id="nim" inputmode="numeric" autocomplete="off" placeholder="Contoh: 6233311001">
+    </div>
+
+    <div class="ladang">
+      <label>Kelas</label>
+      <div class="kelas-pilih" id="kelasPilih"></div>
+    </div>
+
+    <button class="utama" id="tombolMulai">Mulai kerjakan</button>
+    <p class="pesan" id="pesanMulai"></p>
+  </section>
+
+  <!-- ================= LAYAR 2: MEMUAT ================= -->
+  <section id="layarMuat" class="tersembunyi">
+    <p class="memuat" id="teksMuat">Menyiapkan soal…</p>
+  </section>
+
+  <!-- ================= LAYAR 3: SOAL ================= -->
+  <section id="layarSoal" class="tersembunyi">
+    <div class="jejak" id="jejak"></div>
+
+    <div class="kepala">
+      <span id="posisi">Soal 1 dari 50</span>
+      <span id="labelKanan">Pertemuan 1</span>
+    </div>
+
+    <div class="hitung" id="hitung">
+      <div class="jalur"><div class="isi" id="isiWaktu"></div></div>
+      <div class="detik" id="detik">144</div>
+    </div>
+
+    <p class="soal" id="teksSoal"></p>
+    <div class="opsi" id="opsi"></div>
+
+    <button class="utama" id="tombolLanjut">Lanjut ke soal berikutnya</button>
+  </section>
+
+  <!-- ================= LAYAR 4: HASIL ================= -->
+  <section id="layarHasil" class="tersembunyi">
+    <p class="matkul">Jawaban tersimpan</p>
+    <div class="skor" id="angkaSkor">0<small>/100</small></div>
+    <p class="pengantar" id="sapaHasil"></p>
+
+    <div class="rincian">
+      <div><span>Jawaban benar</span><b id="nBenar">0</b></div>
+      <div><span>Jawaban salah</span><b id="nSalah">0</b></div>
+      <div><span>Tidak terjawab</span><b id="nKosong">0</b></div>
+      <div><span>Waktu pengerjaan</span><b id="nDurasi">0 menit</b></div>
+      <div><span>Perpindahan tab atau aplikasi</span><b id="nLanggar">0</b></div>
+    </div>
+
+    <p class="pengantar" id="catatanHasil">
+      Nilai sudah masuk ke rekap dosen. Tutup halaman ini bila sudah selesai.
+    </p>
+  </section>
+
+</div>
+
+<!-- ================= TIRAI PERINGATAN ================= -->
+<div class="tirai tersembunyi" id="tirai">
+  <div class="kotak">
+    <p class="tanda" id="tiraiTanda">Peringatan 1 dari 2</p>
+    <h2 id="tiraiJudul">Kamu meninggalkan halaman ujian</h2>
+    <p class="isi-teks" id="tiraiIsi"></p>
+    <button id="tiraiTombol">Lanjutkan mengerjakan</button>
+  </div>
+</div>
+
+<script>
+/* ============================================================
+   GANTI baris di bawah dengan URL Web App Apps Script kamu
+   (Deploy > New deployment > Web app > salin URL /exec)
+   ============================================================ */
+const API_URL = 'GANTI_DENGAN_URL_EXEC_APPS_SCRIPT';
+
+const KELAS = ['A','B','C','D','E'];
+const HURUF = ['A','B','C','D','E'];   // label pilihan menurut posisi tampil
+const BATAS_LANGGAR = 3;   // pelanggaran ke-3 = kirim paksa
+
+const el = id => document.getElementById(id);
+const layar = { mulai: el('layarMulai'), muat: el('layarMuat'), soal: el('layarSoal'), hasil: el('layarHasil') };
+
+let identitas   = { nama:'', nim:'', kelas:'' };
+let daftarSoal  = [];
+let detikPerSoal= 144;
+let indeks      = 0;
+let jawaban     = {};
+let batasWaktu  = 0;      // stempel waktu kedaluwarsa soal ini
+let jam         = null;
+let mulaiKerja  = 0;
+let sedangKirim = false;
+let aktif       = false;  // true selama layar soal berjalan
+let langgar     = 0;
+let catatanLanggar = [];
+
+/* ---------- JSONP: cara paling stabil memanggil Apps Script dari GitHub Pages ---------- */
+function panggil(params){
+  return new Promise((resolve, reject) => {
+    const nama  = 'cb_' + Date.now() + '_' + Math.floor(Math.random()*1e6);
+    const skrip = document.createElement('script');
+    const batas = setTimeout(() => { bersihkan(); reject(galatJaringan('Server tidak merespons.')); }, 25000);
+
+    function bersihkan(){
+      clearTimeout(batas);
+      delete window[nama];
+      if (skrip.parentNode) skrip.parentNode.removeChild(skrip);
+    }
+
+    window[nama] = data => { bersihkan(); resolve(data); };
+
+    const q = Object.keys(params)
+      .map(k => encodeURIComponent(k) + '=' + encodeURIComponent(params[k]))
+      .join('&');
+
+    skrip.src = API_URL + '?' + q + '&callback=' + nama;
+    skrip.onerror = () => { bersihkan(); reject(galatJaringan('Gagal terhubung ke server.')); };
+    document.body.appendChild(skrip);
+  });
+}
+
+/* galat jaringan diberi tanda agar saran "periksa koneksi" tidak muncul untuk galat dari server */
+function galatJaringan(pesan){
+  const e = new Error(pesan);
+  e.jaringan = true;
+  return e;
+}
+
+function tampilkan(nama){
+  Object.keys(layar).forEach(k => layar[k].classList.toggle('tersembunyi', k !== nama));
+  window.scrollTo(0,0);
+}
+
+function lolos(t){
+  return String(t).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+/* ================= LAYAR PEMBUKA ================= */
+const kotakKelas = el('kelasPilih');
+KELAS.forEach(k => {
+  const b = document.createElement('button');
+  b.type = 'button';
+  b.textContent = k;
+  b.setAttribute('aria-pressed','false');
+  b.onclick = () => {
+    identitas.kelas = k;
+    [...kotakKelas.children].forEach(x => x.setAttribute('aria-pressed', String(x === b)));
+  };
+  kotakKelas.appendChild(b);
+});
+
+el('tombolMulai').onclick = async () => {
+  const pesan = el('pesanMulai');
+  identitas.nama = el('nama').value.trim();
+  identitas.nim  = el('nim').value.trim();
+
+  if (identitas.nama.length < 3) return pesan.textContent = 'Nama lengkap belum diisi dengan benar.';
+  if (identitas.nim.length < 5)  return pesan.textContent = 'NIM belum diisi dengan benar.';
+  if (!identitas.kelas)          return pesan.textContent = 'Pilih kelas terlebih dahulu.';
+  if (API_URL.indexOf('http') !== 0) return pesan.textContent = 'API_URL belum diisi pada index.html.';
+
+  pesan.textContent = '';
+  el('tombolMulai').disabled = true;
+  tampilkan('muat');
+
+  try {
+    const cek = await panggil({ action:'cek', nim: identitas.nim });
+    if (!cek.ok) throw new Error(cek.error || 'NIM tidak valid.');
+    if (cek.sudah){
+      tampilkan('mulai');
+      el('tombolMulai').disabled = false;
+      return pesan.textContent = 'NIM ini sudah pernah mengumpulkan. Hubungi dosen bila perlu mengulang.';
+    }
+
+    const data = await panggil({ action:'soal', kelas: identitas.kelas });
+    if (!data.ok) throw new Error(data.error || 'Soal gagal dimuat.');
+
+    daftarSoal   = data.soal;
+    detikPerSoal = data.detikPerSoal || 144;
+    indeks = 0; jawaban = {}; langgar = 0; catatanLanggar = [];
+    mulaiKerja = Date.now();
+    aktif = true;
+
+    layarPenuh();
+    bangunJejak();
+    tampilkan('soal');
+    window.addEventListener('beforeunload', jagaKeluar);
+    gambarSoal();
+  } catch (err){
+    tampilkan('mulai');
+    el('tombolMulai').disabled = false;
+    pesan.textContent = err.message + (err.jaringan ? ' Periksa koneksi, lalu coba lagi.' : '');
+  }
+};
+
+function jagaKeluar(e){ e.preventDefault(); e.returnValue = ''; }
+
+/* layar penuh bila didukung; iPhone tidak mendukung, jadi kegagalan diabaikan */
+function layarPenuh(){
+  const n = document.documentElement;
+  const minta = n.requestFullscreen || n.webkitRequestFullscreen;
+  if (minta) {
+    try { const p = minta.call(n); if (p && p.catch) p.catch(() => {}); } catch(e){}
+  }
+}
+
+/* ================= PENGAWASAN PINDAH TAB / APLIKASI =================
+   Hanya memakai visibilitychange. Pendeteksi 'blur' sengaja tidak dipakai
+   karena di Android ikut terpicu oleh notifikasi, peringatan baterai,
+   papan ketik, dan bilah alamat browser — bukan hanya perpindahan aplikasi.
+
+   Perpindahan baru dihitung bila halaman tersembunyi minimal AMBANG_DETIK.
+   Layar yang mati sekejap atau notifikasi yang lewat tidak ikut terhitung. */
+const AMBANG_DETIK = 3;
+let mulaiSembunyi = 0;
+
+document.addEventListener('visibilitychange', () => {
+  if (!aktif || sedangKirim) return;
+
+  if (document.hidden){
+    mulaiSembunyi = Date.now();
+    return;
+  }
+
+  const lama = (Date.now() - mulaiSembunyi) / 1000;
+  if (mulaiSembunyi && lama >= AMBANG_DETIK){
+    rekamPelanggaran(Math.round(lama) + ' detik di luar halaman');
+    if (langgar > 0 && langgar < BATAS_LANGGAR) tampilkanTirai();
+  }
+  mulaiSembunyi = 0;
+});
+
+function rekamPelanggaran(jenis){
+  if (!aktif || sedangKirim) return;
+
+  langgar++;
+  catatanLanggar.push('soal ke-' + (indeks+1) + ' (' + jenis + ') pada ' +
+    new Date().toLocaleTimeString('id-ID'));
+
+  el('labelKanan').textContent = 'Pelanggaran ' + langgar + ' dari ' + BATAS_LANGGAR;
+  el('labelKanan').className = 'catat';
+
+  if (langgar >= BATAS_LANGGAR){
+    aktif = false;
+    sembunyikanTirai();
+    kirim(true);
+  }
+}
+
+function tampilkanTirai(){
+  if (langgar >= BATAS_LANGGAR) return;
+  const sisaKesempatan = BATAS_LANGGAR - langgar;
+  el('tiraiTanda').textContent = 'Peringatan ' + langgar + ' dari ' + (BATAS_LANGGAR - 1);
+  el('tiraiIsi').textContent =
+    'Perpindahan ini sudah tercatat dan akan terlihat pada rekap dosen. ' +
+    (sisaKesempatan > 1
+      ? 'Tersisa ' + (sisaKesempatan - 1) + ' peringatan lagi sebelum jawaban dikirim otomatis.'
+      : 'Perpindahan berikutnya akan langsung mengirim jawabanmu, berapa pun soal yang tersisa.');
+  el('tirai').classList.remove('tersembunyi');
+  el('tiraiTombol').focus();
+}
+
+function sembunyikanTirai(){ el('tirai').classList.add('tersembunyi'); }
+el('tiraiTombol').onclick = sembunyikanTirai;
+
+/* halangi salin teks soal */
+document.addEventListener('contextmenu', e => { if (aktif) e.preventDefault(); });
+document.addEventListener('copy',        e => { if (aktif) e.preventDefault(); });
+
+/* ================= LAYAR SOAL ================= */
+function bangunJejak(){
+  const j = el('jejak');
+  j.innerHTML = '';
+  daftarSoal.forEach(() => j.appendChild(document.createElement('i')));
+}
+
+function perbaruiJejak(){
+  [...el('jejak').children].forEach((n,i) => {
+    n.className = i < indeks ? 'lewat' : (i === indeks ? 'kini' : '');
+  });
+}
+
+function gambarSoal(){
+  const s = daftarSoal[indeks];
+  const terpilih = jawaban[s.id] || '';
+
+  el('posisi').textContent = 'Soal ' + (indeks+1) + ' dari ' + daftarSoal.length;
+  if (langgar === 0){
+    el('labelKanan').textContent = 'Pertemuan ' + s.pertemuan;
+    el('labelKanan').className = '';
+  }
+  el('teksSoal').textContent = s.soal;
+  el('tombolLanjut').textContent =
+    (indeks === daftarSoal.length - 1) ? 'Kirim jawaban' : 'Lanjut ke soal berikutnya';
+
+  /* huruf di layar mengikuti posisi (A–E berurutan); yang dikirim ke server tetap o.kode,
+     yaitu identitas pilihan, sehingga pengacakan per mahasiswa tidak merusak penilaian */
+  const kotak = el('opsi');
+  kotak.innerHTML = '';
+  s.opsi.forEach((o, i) => {
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.setAttribute('aria-pressed', String(terpilih === o.kode));
+    b.innerHTML = '<span class="kode">' + HURUF[i] + '</span><span>' + lolos(o.teks) + '</span>';
+    b.onclick = () => {
+      jawaban[s.id] = o.kode;
+      [...kotak.children].forEach(x => x.setAttribute('aria-pressed', String(x === b)));
+    };
+    kotak.appendChild(b);
+  });
+
+  perbaruiJejak();
+  mulaiHitungMundur();
+}
+
+/* hitung mundur berbasis stempel waktu, tetap akurat walau tab dijalankan di latar */
+function mulaiHitungMundur(){
+  clearInterval(jam);
+  batasWaktu = Date.now() + detikPerSoal * 1000;
+
+  const isi = el('isiWaktu');
+  isi.style.transition = 'none';
+  isi.style.transform  = 'scaleX(1)';
+  el('hitung').classList.remove('mendesak');
+  el('detik').textContent = detikPerSoal;
+
+  void isi.offsetWidth;                       // paksa reflow agar transisi mulus
+  isi.style.transition = 'transform ' + detikPerSoal + 's linear';
+  isi.style.transform  = 'scaleX(0)';
+
+  jam = setInterval(() => {
+    const sisa = Math.ceil((batasWaktu - Date.now()) / 1000);
+    el('detik').textContent = Math.max(sisa, 0);
+    if (sisa <= 10) el('hitung').classList.add('mendesak');
+    if (sisa <= 0){ clearInterval(jam); lanjut(); }
+  }, 250);
+}
+
+el('tombolLanjut').onclick = lanjut;
+
+function lanjut(){
+  if (!aktif) return;
+  clearInterval(jam);
+  if (indeks < daftarSoal.length - 1){
+    indeks++;
+    gambarSoal();
+  } else {
+    kirim(false);
+  }
+}
+
+/* pintasan papan ketik: A–E atau 1–5 memilih, Enter melanjutkan */
+document.addEventListener('keydown', e => {
+  if (!aktif || layar.soal.classList.contains('tersembunyi')) return;
+  if (!el('tirai').classList.contains('tersembunyi')) return;
+  const peta = { '1':0,'2':1,'3':2,'4':3,'5':4,'A':0,'B':1,'C':2,'D':3,'E':4 };
+  const k = e.key.toUpperCase();
+  if (k in peta){
+    const b = el('opsi').children[peta[k]];
+    if (b) b.click();
+  } else if (e.key === 'Enter'){
+    e.preventDefault();
+    lanjut();
+  }
+});
+
+/* ================= KIRIM & HASIL ================= */
+async function kirim(paksa){
+  if (sedangKirim) return;
+  sedangKirim = true;
+  aktif = false;
+  clearInterval(jam);
+  window.removeEventListener('beforeunload', jagaKeluar);
+  if (document.fullscreenElement && document.exitFullscreen) { try { document.exitFullscreen(); } catch(e){} }
+
+  el('teksMuat').textContent = paksa
+    ? 'Batas perpindahan tercapai. Mengirim jawaban…'
+    : 'Mengirim jawaban…';
+  tampilkan('muat');
+
+  const jw     = daftarSoal.map(s => s.id + '-' + (jawaban[s.id] || '')).join('~');
+  const durasi = Math.round((Date.now() - mulaiKerja)/1000);
+
+  try {
+    const hasil = await panggil({
+      action:'submit',
+      nama: identitas.nama,
+      nim: identitas.nim,
+      kelas: identitas.kelas,
+      jw: jw,
+      durasi: durasi,
+      pelanggaran: langgar,
+      paksa: paksa ? 1 : 0,
+      catatan: catatanLanggar.join(' | ').slice(0,900)
+    });
+
+    if (!hasil.ok) throw new Error(hasil.error);
+
+    el('angkaSkor').innerHTML = hasil.skor + '<small>/100</small>';
+    el('sapaHasil').textContent = hasil.nama + ' · ' + hasil.nim + ' · Kelas ' + hasil.kelas;
+    el('nBenar').textContent  = hasil.benar + ' dari ' + hasil.total;
+    el('nSalah').textContent  = hasil.salah;
+    el('nKosong').textContent = hasil.kosong;
+    el('nDurasi').textContent = Math.floor(durasi/60) + ' menit ' + (durasi%60) + ' detik';
+
+    const kotakLanggar = el('nLanggar');
+    kotakLanggar.textContent = langgar + ' kali';
+    kotakLanggar.className = langgar > 0 ? 'merah' : '';
+
+    if (paksa){
+      el('catatanHasil').textContent =
+        'Jawaban dikirim otomatis karena kamu berpindah tab atau aplikasi sebanyak ' +
+        BATAS_LANGGAR + ' kali. Soal yang belum sempat dikerjakan dihitung kosong. ' +
+        'Bicarakan dengan dosen bila ada kendala teknis saat mengerjakan.';
+    } else {
+      el('catatanHasil').textContent = 'Nilai sudah masuk ke rekap dosen. Tutup halaman ini bila sudah selesai.';
+    }
+
+    tampilkan('hasil');
+  } catch (err){
+    sedangKirim = false;
+    el('teksMuat').innerHTML =
+      'Jawaban belum terkirim: ' + lolos(err.message) +
+      '<br><br><button class="utama" onclick="kirim(' + (paksa?'true':'false') + ')">Coba kirim lagi</button>';
+  }
+}
+</script>
+</body>
+</html>
